@@ -1218,10 +1218,16 @@ wait_loading(#state{loading = Loading0} = St, Mod, Pid) ->
 
 reply_loading(Ref, Mod, Reply, #state{loading = Loading0} = St)
   when is_reference(Ref) ->
-    {Waiting, Loading} = maps:take(Mod, Loading0),
-    _ = [reply(Pid, Reply) || Pid <- Waiting],
-    erlang:demonitor(Ref, [flush]),
-    {reply, Reply, St#state{loading = Loading}};
+    case maps:take(Mod, Loading0) of 
+        {Waiting, Loading} -> 
+            _ = [reply(Pid, Reply) || Pid <- Waiting],
+            erlang:demonitor(Ref, [flush]),
+            {reply, Reply, St#state{loading = Loading}};
+        error ->
+            erlang:demonitor(Ref, [flush]),
+            %% io:format(user, "MISSING ~p ~p ~p ~n",  [Ref, Mod, Loading0 ]),
+            {reply, Reply, St}
+    end;
 reply_loading(Ref, _Mod, Reply, St) when is_boolean(Ref) ->
     {reply, Reply, St}.
 
